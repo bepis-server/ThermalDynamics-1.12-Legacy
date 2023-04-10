@@ -249,16 +249,17 @@ public class DuctUnitEnergy extends DuctUnit<DuctUnitEnergy, GridEnergy, IEnergy
 			}
 		}*/
 
-		for (int mask = nonnullCachedTileMask & (-1 << internalSideCounter); mask != 0 && usedEnergy < energy; mask &= ~Integer.lowestOneBit(mask)) {
+		for (int mask = nonnullCachedTileMask & (-1 << internalSideCounter); mask != 0 && usedEnergy < energy; ) {
 			byte i = (byte) Integer.numberOfTrailingZeros(mask);
+			mask &= ~Integer.lowestOneBit(mask);
 
 			IEnergyReceiver receiver = tileCache[i];
 			if (receiver.canConnectEnergy(EnumFacing.VALUES[i ^ 1])) {
 				usedEnergy += sendEnergy(receiver, energy - usedEnergy, i, simulate);
-			}
-			if (!simulate && usedEnergy >= energy) {
-				internalSideCounter = tickInternalSideCounter(i + 1);
-				return usedEnergy;
+				if (!simulate && usedEnergy >= energy) {
+					internalSideCounter = tickInternalSideCounter(i + 1);
+					break;
+				}
 			}
 		}
 
@@ -275,16 +276,17 @@ public class DuctUnitEnergy extends DuctUnit<DuctUnitEnergy, GridEnergy, IEnergy
 			}
 		}*/
 
-		for (int mask = nonnullCachedTileMask & ~(-1 << internalSideCounter); mask != 0 && usedEnergy < energy; mask &= ~Integer.lowestOneBit(mask)) {
+		for (int mask = nonnullCachedTileMask & ~(-1 << internalSideCounter); mask != 0 && usedEnergy < energy; ) {
 			byte i = (byte) Integer.numberOfTrailingZeros(mask);
+			mask &= ~Integer.lowestOneBit(mask);
 
 			IEnergyReceiver receiver = tileCache[i];
 			if (receiver.canConnectEnergy(EnumFacing.VALUES[i ^ 1])) {
 				usedEnergy += sendEnergy(receiver, energy - usedEnergy, i, simulate);
-			}
-			if (!simulate && usedEnergy >= energy) {
-				internalSideCounter = tickInternalSideCounter(i + 1);
-				break;
+				if (!simulate && usedEnergy >= energy) {
+					internalSideCounter = tickInternalSideCounter(i + 1);
+					break;
+				}
 			}
 		}
 		return usedEnergy;
