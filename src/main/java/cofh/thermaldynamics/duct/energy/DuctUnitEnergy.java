@@ -227,10 +227,15 @@ public class DuctUnitEnergy extends DuctUnit<DuctUnitEnergy, GridEnergy, IEnergy
 	}
 
 	public int transmitEnergy(int energy, boolean simulate) {
+		int nonnullCachedTileMask = this.nonnullCachedTileMask;
 
 		int usedEnergy = 0;
 
-		for (byte i = this.internalSideCounter; i < 6 && usedEnergy < energy; i++) {
+		if (nonnullCachedTileMask == 0) {
+			return usedEnergy;
+		}
+
+		/*for (byte i = this.internalSideCounter; i < 6 && usedEnergy < energy; i++) {
 
 			if (tileCache[i] != null) {
 				IEnergyReceiver receiver = tileCache[i];
@@ -242,8 +247,22 @@ public class DuctUnitEnergy extends DuctUnit<DuctUnitEnergy, GridEnergy, IEnergy
 					break;
 				}
 			}
+		}*/
+
+		for (int mask = nonnullCachedTileMask & (-1 << internalSideCounter); mask != 0 && usedEnergy < energy; mask &= ~Integer.lowestOneBit(mask)) {
+			byte i = (byte) Integer.numberOfTrailingZeros(mask);
+
+			IEnergyReceiver receiver = tileCache[i];
+			if (receiver.canConnectEnergy(EnumFacing.VALUES[i ^ 1])) {
+				usedEnergy += sendEnergy(receiver, energy - usedEnergy, i, simulate);
+			}
+			if (!simulate && usedEnergy >= energy) {
+				internalSideCounter = tickInternalSideCounter(i + 1);
+				return usedEnergy;
+			}
 		}
-		for (byte i = 0; i < this.internalSideCounter && usedEnergy < energy; i++) {
+
+		/*for (byte i = 0; i < this.internalSideCounter && usedEnergy < energy; i++) {
 			if (tileCache[i] != null) {
 				IEnergyReceiver receiver = tileCache[i];
 				if (receiver.canConnectEnergy(EnumFacing.VALUES[i ^ 1])) {
@@ -253,6 +272,19 @@ public class DuctUnitEnergy extends DuctUnit<DuctUnitEnergy, GridEnergy, IEnergy
 					internalSideCounter = tickInternalSideCounter(i + 1);
 					break;
 				}
+			}
+		}*/
+
+		for (int mask = nonnullCachedTileMask & ~(-1 << internalSideCounter); mask != 0 && usedEnergy < energy; mask &= ~Integer.lowestOneBit(mask)) {
+			byte i = (byte) Integer.numberOfTrailingZeros(mask);
+
+			IEnergyReceiver receiver = tileCache[i];
+			if (receiver.canConnectEnergy(EnumFacing.VALUES[i ^ 1])) {
+				usedEnergy += sendEnergy(receiver, energy - usedEnergy, i, simulate);
+			}
+			if (!simulate && usedEnergy >= energy) {
+				internalSideCounter = tickInternalSideCounter(i + 1);
+				break;
 			}
 		}
 		return usedEnergy;

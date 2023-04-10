@@ -43,6 +43,7 @@ public abstract class DuctUnit<T extends DuctUnit<T, G, C>, G extends MultiBlock
 	protected G grid;
 	protected byte nodeMask;
 	protected byte inputMask;
+	protected byte nonnullCachedTileMask;
 	private boolean isValidForForming = true;
 
 	public DuctUnit(TileGrid parent, Duct duct) {
@@ -148,6 +149,7 @@ public abstract class DuctUnit<T extends DuctUnit<T, G, C>, G extends MultiBlock
 	}
 
 	public boolean loadSignificantCache(TileEntity tile, byte side) {
+		this.nonnullCachedTileMask &= ~(1 << side);
 
 		if (tile == null) {
 			tileCache[side] = null;
@@ -157,6 +159,8 @@ public abstract class DuctUnit<T extends DuctUnit<T, G, C>, G extends MultiBlock
 		C c = cacheTile(tile, side);
 		if (c != null) {
 			tileCache[side] = c;
+			this.nonnullCachedTileMask |= (1 << side);
+
 			if (isNode(c)) {
 				nodeMask |= (1 << side);
 			}
@@ -190,8 +194,8 @@ public abstract class DuctUnit<T extends DuctUnit<T, G, C>, G extends MultiBlock
 	}
 
 	public void clearCache(byte side) {
-
 		tileCache[side] = null;
+		this.nonnullCachedTileMask &= ~(1 << side);
 	}
 
 	@OverridingMethodsMustInvokeSuper
@@ -307,17 +311,30 @@ public abstract class DuctUnit<T extends DuctUnit<T, G, C>, G extends MultiBlock
 	}
 
 	public byte tickInternalSideCounter(int start) {
+		int nonnullCachedTileMask = this.nonnullCachedTileMask;
 
-		for (byte a = (byte) start; a < 6; a++) {
+		/*for (byte a = (byte) start; a < 6; a++) {
 			if (tileCache[a] != null) {
 				return a;
 			}
+		}*/
+
+		int highMask = (-1 << start);
+		if ((nonnullCachedTileMask & highMask) != 0) {
+			return (byte) Integer.numberOfTrailingZeros(nonnullCachedTileMask & highMask);
 		}
-		for (byte a = 0; a < start; a++) {
+
+		/*for (byte a = 0; a < start; a++) {
 			if (tileCache[a] != null) {
 				return a;
 			}
+		}*/
+
+		int lowMask = ~highMask;
+		if ((nonnullCachedTileMask & lowMask) != 0) {
+			return (byte) Integer.numberOfTrailingZeros(nonnullCachedTileMask & lowMask);
 		}
+
 		return 0;
 	}
 
